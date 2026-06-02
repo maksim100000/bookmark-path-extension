@@ -7,6 +7,7 @@ export default defineManifest({
     name: "Bookmark Search & Path: Simple Viewer",
     version: pkg.version,
     description: "Plain bookmark search extension. Preview and open folders, quickly find and navigate to browser links, displaying full folder paths.",
+    default_locale: "en",
     icons: {
         16: '16-bm.png',
         32: '32-bm.png',
@@ -18,7 +19,7 @@ export default defineManifest({
         default_icon: {
             48: '48-bm.png',
         },
-        default_title: "Open panel"
+        default_title: "Open popup"
     },
     background:{
         service_worker: "src/background/main.ts"
@@ -26,8 +27,5 @@ export default defineManifest({
     permissions: [
         "bookmarks",
     ],
-   
-    content_security_policy: {
-        extension_pages: "script-src 'self'; object-src 'self';"
-    }
+    
 })
