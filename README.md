@@ -1,4 +1,4 @@
-# Bookmark Search & Path — Plain Viewer
+# Bookmark Search & Path: Simple Viewer
 
 A plain, lightweight, and fast browser extension that helps you instantly locate your saved links and view their full folder hierarchies directly below the URL.
 

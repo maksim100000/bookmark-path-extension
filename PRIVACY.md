@@ -1,4 +1,4 @@
-# Privacy Policy for Bookmark Search & Path — Plain Viewer
+# Privacy Policy for Bookmark Search & Path: Simple Viewer
 
 **Effective Date:** June 2, 2026
 
