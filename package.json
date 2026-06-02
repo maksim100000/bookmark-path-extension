@@ -1,0 +1,26 @@
+{
+  "name": "simple-finder",
+  "type": "module",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "build:zip": "vite build && 7z -r extension.zip dist"
+  },
+  "dependencies": {
+    "svelte": "^5.56.0",
+    "tailwindcss": "^4.3.0"
+  },
+  "devDependencies": {
+    "@crxjs/vite-plugin": "^2.4.0",
+    "@sveltejs/vite-plugin-svelte": "^7.1.2",
+    "@tailwindcss/vite": "^4.3.0",
+    "@tsconfig/svelte": "^5.0.8",
+    "@types/chrome": "^0.1.42",
+    "@types/node": "^25.9.1",
+    "typescript": "^6.0.3",
+    "vite": "^8.0.14",
+    "vite-plugin-zip-pack": "^1.2.4"
+  }
+}
