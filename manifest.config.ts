@@ -20,7 +20,9 @@ export default defineManifest({
         },
         default_title: "Open panel"
     },
-    
+    background:{
+        service_worker: "src/background/main.ts"
+    },
     permissions: [
         "bookmarks",
     ],
