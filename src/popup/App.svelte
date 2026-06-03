@@ -22,6 +22,10 @@
         pathNodes: { id: string; title: string }[];
     }
 
+    let searchTimeout: ReturnType<typeof setTimeout>;
+    let totalMatches = $state(0);
+    let isCaseSensitive = $state(false);
+
     let query = $state('');
     let results = $state<FoundBookmark[]>([]);
     let folderTree = $state<FolderNode[]>([]);
@@ -140,28 +144,53 @@
         window.removeEventListener('mouseup', stopResize);
     }
 
-    function onSearchInput(e: Event) {
-        const target = e.target as HTMLInputElement;
-        query = target.value;
-        const cleanText = query.trim().toLowerCase();
+    function onSearchInput(e?: Event) {
+        if (e) {
+            const target = e.target as HTMLInputElement;
+            query = target.value;
+        }
+
+        const cleanText = query.trim();
 
         if (cleanText.length === 0) {
+            clearTimeout(searchTimeout);
             results = [];
+            totalMatches = 0;
             return;
         }
 
-        const matched = allBookmarksCache.filter(b => {
-            const titleLower = (b.title || '').toLowerCase();
-            const urlLower = (b.url || '').toLowerCase();
-            return titleLower.includes(cleanText) || urlLower.includes(cleanText);
-        });
+        clearTimeout(searchTimeout);
 
-        results = matched.map(b => ({
-            id: b.id,
-            title: b.title || 'Untitled',
-            url: b.url,
-            pathNodes: folderPathsMap.get(b.parentId || '') || []
-        }));
+        searchTimeout = setTimeout(() => {
+            const matched = allBookmarksCache.filter(b => {
+                const title = b.title || '';
+                const url = b.url || '';
+
+                if (isCaseSensitive) {
+                    return title.includes(cleanText) || url.includes(cleanText);
+                } else {
+                    const queryLower = cleanText.toLowerCase();
+                    return title.toLowerCase().includes(queryLower) || url.toLowerCase().includes(queryLower);
+                }
+            });
+
+            totalMatches = matched.length;
+            const limited = matched.slice(0, 50);
+
+            results = limited.map(b => ({
+                id: b.id,
+                title: b.title || 'Untitled',
+                url: b.url,
+                pathNodes: folderPathsMap.get(b.parentId || '') || []
+            }));
+        }, 150);
+    }
+
+    function toggleCaseSensitive() {
+        isCaseSensitive = !isCaseSensitive;
+        if (query.trim().length > 0) {
+            onSearchInput();
+        }
     }
 
     function openInBackground(e: MouseEvent, url: string | undefined) {
@@ -176,6 +205,7 @@
     }
 
     function clearSearch() {
+        clearTimeout(searchTimeout);
         query = '';
         results = [];
     }
@@ -298,27 +328,61 @@
                         value={query}
                         oninput={onSearchInput}
                         placeholder="Start searching..."
-                        class="w-full px-4 pr-10 py-2.5 text-sm text-slate-900 placeholder-slate-400 bg-white border border-slate-200 rounded-xl outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 shadow-xs transition-colors"
+                        class="w-full px-4 pr-18 py-2.5 text-sm text-slate-900 placeholder-slate-400 bg-white border border-slate-200 rounded-xl outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600 shadow-xs transition-colors"
                         disabled={!isInitialized}
                 />
 
-                {#if query.length > 0}
+                <div class="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
+
+                    {#if query.length > 0}
+                        <button
+                                title="clear"
+                                onclick={clearSearch}
+                                type="button"
+                                class="text-slate-400 hover:text-slate-600 p-1 rounded-full hover:bg-slate-100 transition-colors cursor-pointer flex items-center justify-center w-6 h-6"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg"
+                                 class="h-4 w-4"
+                                 fill="none" viewBox="0 0 24 24"
+                                 stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round"
+                                      stroke-linejoin="round"
+                                      d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    {/if}
+                    
                     <button
-                            title="clear"
-                            onclick={clearSearch}
                             type="button"
-                            class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600
-            p-1 rounded-full hover:bg-slate-100 transition-colors cursor-pointer"
+                            title="Match Case (Учитывать регистр)"
+                            onclick={toggleCaseSensitive}
+                            class="p-1 rounded-md transition-colors cursor-pointer text-xs font-mono font-bold border flex items-center justify-center w-6 h-6 select-none focus:outline-none"
+                            class:bg-blue-100={isCaseSensitive}
+                            class:text-blue-600={isCaseSensitive}
+                            class:border-blue-200={isCaseSensitive}
+                            class:text-slate-400={!isCaseSensitive}
+                            class:bg-transparent={!isCaseSensitive}
+                            class:border-transparent={!isCaseSensitive}
+                            class:hover:bg-slate-100={!isCaseSensitive}
+                            class:hover:text-slate-600={!isCaseSensitive}
                     >
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4"
-                             fill="none" viewBox="0 0 24 24"
-                             stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round"
-                                  d="M6 18L18 6M6 6l12 12"/>
-                        </svg>
+                        Aa
                     </button>
-                {/if}
+
+
+                </div>
             </div>
+
+            {#if query.trim().length > 0}
+                <div class="px-2 py-1 text-[11px] text-slate-400 font-medium">
+                    {#if totalMatches > 50}
+                        Showing 50 bookmarks from {totalMatches}. Please clarify
+                        your request.
+                    {:else}
+                        Bookmarks found: {totalMatches}
+                    {/if}
+                </div>
+            {/if}
         </div>
 
         <div class="flex-1 overflow-y-auto overflow-x-hidden py-2 mb-2">
