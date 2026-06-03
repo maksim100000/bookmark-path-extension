@@ -30,7 +30,9 @@ Most built-in bookmark managers are heavy and don't show you where your found li
 5. Click **Load unpacked** and select the build/dist folder.
 
 ---
+👉 **[Install Bookmark Search & Path: Simple Viewer from the Chrome Web Store](https://chromewebstore.google.com/detail/bookmark-search-path-simp/dkfhcnoneafinphdiffnegnhndikbmgg?authuser=0&hl=en-US)**
 
+---
 ## ⚙️ My Other Extensions
 
 If you find this tool useful, check out my other open-source browser utilities:
