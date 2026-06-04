@@ -1,4 +1,4 @@
-# Privacy Policy for Bookmark Search & Path: Simple Viewer
+# Privacy Policy for [Search & Path: Simple Viewer](https://chromewebstore.google.com/detail/bookmark-search-path-simp/dkfhcnoneafinphdiffnegnhndikbmgg)
 
 **Effective Date:** June 2, 2026
 
