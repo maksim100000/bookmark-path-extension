@@ -6,7 +6,7 @@ export default defineManifest({
     manifest_version: 3,
     name: "Bookmark Search & Path: Simple Viewer",
     version: pkg.version,
-    description: "Plain bookmark search extension. Preview and open folders, quickly find and navigate to browser links, displaying full folder paths.\n\nSource code on GitHub: https://github.com/maksim100000/bookmark-path-extension",
+    description: "Plain bookmark search extension. Preview and open folders, quickly find and navigate to browser links, displaying full folder paths.",
     icons: {
         16: '16-bm.png',
         32: '32-bm.png',
