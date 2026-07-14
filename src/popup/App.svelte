@@ -1,5 +1,5 @@
 <script lang="ts">
-    import {onMount} from 'svelte';
+    import {onMount, tick} from 'svelte';
     import {SvelteSet} from 'svelte/reactivity';
 
     interface LeafBookmark {
@@ -103,6 +103,8 @@
         return tree;
     }
 
+    let searchInputEl  = $state<HTMLInputElement | null>(null);
+    
     onMount(async () => {
         if (typeof chrome === 'undefined' || !chrome.bookmarks) return;
         try {
@@ -111,6 +113,9 @@
             folderPathsMap.clear();
             folderTree = processTree(entireTree);
             isInitialized = true;
+            
+            await tick()
+            searchInputEl?.focus();
         } catch (err) {
             console.error('Initialization error:', err);
         }
@@ -324,6 +329,7 @@
         <div class="w-full px-4 pt-4 pb-2 shrink-0">
             <div class="relative w-full">
                 <input
+                        bind:this={searchInputEl}
                         type="text"
                         value={query}
                         oninput={onSearchInput}
