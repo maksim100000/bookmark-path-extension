@@ -336,6 +336,21 @@
             handleDeleteFolder();
         }
     }
+
+    async function handleDeleteBookmark(bookmarkId: string) {
+        try {
+            await chrome.bookmarks.remove(bookmarkId);
+
+            // Refresh the tree
+            const entireTree = await chrome.bookmarks.getTree();
+            allBookmarksCache = [];
+            folderPathsMap.clear();
+            folderTree = processTree(entireTree);
+        } catch (err) {
+            console.error('Failed to delete bookmark:', err);
+            alert('Failed to delete bookmark: ' + (err as Error).message);
+        }
+    }
 </script>
 
 <main
@@ -418,15 +433,28 @@
                             {#if folder.bookmarks.length > 0}
                                 <div class="pl-5 my-1 flex flex-col gap-0.5 border-l border-slate-100">
                                     {#each folder.bookmarks as bookmark (bookmark.id)}
-                                        <a
-                                                href={bookmark.url}
-                                                onclick={(e) => openInBackground(e, bookmark.url)}
-                                                class="text-[11px] text-slate-500 hover:text-blue-700 bg-transparent hover:bg-blue-50/40 border border-transparent hover:border-blue-300 rounded-md truncate px-1.5 py-0.5 transition-all cursor-pointer flex items-center gap-1"
-                                                title={bookmark.title}
-                                        >
-                                            <span class="text-slate-300 shrink-0 text-[10px]">📄</span>
-                                            <span class="truncate">{bookmark.title}</span>
-                                        </a>
+                                        <div class="flex items-center group/bm">
+                                            <button
+                                                    type="button"
+                                                    onclick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleDeleteBookmark(bookmark.id);
+                                                    }}
+                                                    class="w-5 h-5 flex items-center justify-center rounded text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors opacity-0 group-hover/bm:opacity-100 cursor-pointer border-none outline-none text-xs leading-none shrink-0 mr-1"
+                                                    title="Delete bookmark"
+                                            >
+                                                ✕
+                                            </button>
+                                            <a
+                                                    href={bookmark.url}
+                                                    onclick={(e) => openInBackground(e, bookmark.url)}
+                                                    class="text-[11px] text-slate-500 hover:text-blue-700 bg-transparent hover:bg-blue-50/40 border border-transparent hover:border-blue-300 rounded-md truncate px-1.5 py-0.5 transition-all cursor-pointer flex items-center gap-1 flex-1"
+                                                    title={bookmark.title}
+                                            >
+                                                <span class="text-slate-300 shrink-0 text-[10px]">📄</span>
+                                                <span class="truncate">{bookmark.title}</span>
+                                            </a>
+                                        </div>
                                     {/each}
                                 </div>
                             {/if}
