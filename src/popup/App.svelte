@@ -36,6 +36,34 @@
 
     let expandedFolders = $state(new SvelteSet<string>());
 
+    // Create folder modal state
+    let showCreateModal = $state(false);
+    let createModalParentId = $state<string | null>(null);
+    let newFolderName = $state('');
+    let folderInputEl = $state<HTMLInputElement | null>(null);
+
+    // Delete confirmation modal state
+    let showDeleteModal = $state(false);
+    let deleteFolderId = $state<string | null>(null);
+    let deleteFolderTitle = $state('');
+    let isDeleting = $state(false);
+    let isCreating = $state(false);
+
+    $effect(() => {
+        if (showCreateModal) {
+            tick().then(() => folderInputEl?.focus());
+        }
+    });
+
+    $effect(() => {
+        if (showDeleteModal) {
+            tick().then(() => {
+                const btn = document.querySelector('[data-delete-confirm]') as HTMLButtonElement | null;
+                btn?.focus();
+            });
+        }
+    });
+
     let allBookmarksCache: chrome.bookmarks.BookmarkTreeNode[] = [];
     let folderPathsMap = new Map<string, { id: string; title: string }[]>();
 
@@ -214,6 +242,100 @@
         query = '';
         results = [];
     }
+
+    function openCreateModal(folderId: string) {
+        createModalParentId = folderId;
+        newFolderName = '';
+        showCreateModal = true;
+    }
+
+    function closeCreateModal() {
+        showCreateModal = false;
+        createModalParentId = null;
+        newFolderName = '';
+    }
+
+    async function handleCreateFolder() {
+        if (isCreating) return;
+        const name = newFolderName.trim();
+        if (!name || !createModalParentId) return;
+        isCreating = true;
+
+        try {
+            await chrome.bookmarks.create({
+                parentId: createModalParentId,
+                title: name
+            });
+
+            // Refresh the tree
+            const entireTree = await chrome.bookmarks.getTree();
+            allBookmarksCache = [];
+            folderPathsMap.clear();
+            folderTree = processTree(entireTree);
+
+            // Expand the parent folder to show the new subfolder
+            expandedFolders.add(createModalParentId);
+            closeCreateModal();
+        } catch (err) {
+            console.error('Failed to create folder:', err);
+        } finally {
+            isCreating = false;
+        }
+    }
+
+    function onModalKeyDown(e: KeyboardEvent) {
+        e.stopPropagation();
+        if (e.key === 'Escape') {
+            closeCreateModal();
+        } else if (e.key === 'Enter') {
+            handleCreateFolder();
+        }
+    }
+
+    function openDeleteModal(folderId: string, title: string) {
+        deleteFolderId = folderId;
+        deleteFolderTitle = title;
+        showDeleteModal = true;
+    }
+
+    function closeDeleteModal() {
+        showDeleteModal = false;
+        deleteFolderId = null;
+        deleteFolderTitle = '';
+    }
+
+    async function handleDeleteFolder() {
+        if (!deleteFolderId || isDeleting) return;
+        isDeleting = true;
+
+        try {
+            await chrome.bookmarks.removeTree(deleteFolderId);
+
+            // Refresh the tree
+            const entireTree = await chrome.bookmarks.getTree();
+            allBookmarksCache = [];
+            folderPathsMap.clear();
+            folderTree = processTree(entireTree);
+
+            // Clean up expanded state
+            expandedFolders.delete(deleteFolderId);
+            closeDeleteModal();
+        } catch (err) {
+            console.error('Failed to delete folder:', err);
+            alert('Failed to delete folder: ' + (err as Error).message);
+        } finally {
+            isDeleting = false;
+        }
+    }
+
+    function onDeleteModalKeyDown(e: KeyboardEvent) {
+        e.stopPropagation();
+        if (e.key === 'Escape') {
+            closeDeleteModal();
+        } else if (e.key === 'Enter') {
+            handleDeleteFolder();
+        }
+    }
 </script>
 
 <main
@@ -240,6 +362,17 @@
 
                             <button
                                     type="button"
+                                    onclick={(e) => {
+                                        e.stopPropagation();
+                                        openDeleteModal(folder.id, folder.title);
+                                    }}
+                                    class="w-6 h-6 flex items-center justify-center rounded-md text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100 cursor-pointer border-none outline-none text-sm leading-none shrink-0"
+                                    title="Delete folder"
+                            >
+                                ✕
+                            </button>
+                            <button
+                                    type="button"
                                     onclick={() => toggleFolder(folder.id)}
                                     class="p-1 text-slate-400 hover:text-slate-700 transition-transform duration-150 cursor-pointer w-6 h-6 flex items-center justify-center bg-transparent border-none outline-none focus:outline-none select-none"
                                     class:rotate-90={isExpanded}
@@ -261,11 +394,23 @@
                             <a
                                     href="chrome://bookmarks/?id={folder.id}"
                                     onclick={(e) => openChromeFolderInBackground(e, folder.id)}
-                                    class="flex-1 text-left py-1 pr-2 text-slate-700 group-hover:text-blue-600 transition-colors flex items-center gap-1.5 cursor-pointer truncate font-medium text-[13px] focus:outline-none"
+                                    class="flex-1 text-left py-1 pr-1 text-slate-700 group-hover:text-blue-600 transition-colors flex items-center gap-1.5 cursor-pointer truncate font-medium text-[13px] focus:outline-none"
                             >
                                 <span class="text-slate-400 shrink-0 text-xs">{isExpanded ? '📂' : '📁'}</span>
                                 <span class="truncate">{folder.title}</span>
                             </a>
+
+                            <button
+                                    type="button"
+                                    onclick={(e) => {
+                                        e.stopPropagation();
+                                        openCreateModal(folder.id);
+                                    }}
+                                    class="w-6 h-6 flex items-center justify-center rounded-md text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors opacity-0 group-hover:opacity-100 cursor-pointer border-none outline-none text-lg leading-none"
+                                    title="Create subfolder"
+                            >
+                                +
+                            </button>
 
                         </div>
 
@@ -438,5 +583,102 @@
             {/if}
         </div>
     </section>
+
+{#if showDeleteModal}
+    <div
+            class="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delete-folder-title"
+            tabindex="-1"
+            onclick={closeDeleteModal}
+            onkeydown={onDeleteModalKeyDown}
+    >
+        <div
+                class="bg-white rounded-2xl shadow-xl p-5 w-80"
+                role="presentation"
+                onclick={(e) => e.stopPropagation()}
+        >
+            <h2 id="delete-folder-title" class="text-base font-semibold text-slate-800 mb-2">Delete Folder</h2>
+            <p class="text-sm text-slate-600 mb-4">
+                Are you sure you want to delete
+                <span class="font-medium text-slate-800"> {deleteFolderTitle}</span>? This action cannot be undone.
+            </p>
+            <div class="flex justify-end gap-2">
+                <button
+                        type="button"
+                        onclick={(e) => {
+                            e.stopPropagation();
+                            closeDeleteModal();
+                        }}
+                        class="px-4 py-2 text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer border-none outline-none"
+                >
+                    Cancel
+                </button>
+                <button
+                        data-delete-confirm
+                        type="button"
+                        onclick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteFolder();
+                        }}
+                        class="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors cursor-pointer border-none outline-none"
+                >
+                    Delete
+                </button>
+            </div>
+        </div>
+    </div>
+{/if}
+    
+{#if showCreateModal}
+    <div
+            class="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="new-folder-title"
+            tabindex="-1"
+            onclick={closeCreateModal}
+            onkeydown={onModalKeyDown}
+    >
+        <div
+                class="bg-white rounded-2xl shadow-xl p-5 w-80"
+                role="presentation"
+                onclick={(e) => e.stopPropagation()}
+        >
+            <h2 id="new-folder-title" class="text-base font-semibold text-slate-800 mb-3">New Folder</h2>
+            <input
+                    bind:this={folderInputEl}
+                    type="text"
+                    bind:value={newFolderName}
+                    placeholder="Folder name"
+                    class="w-full px-3 py-2 text-sm text-slate-900 placeholder-slate-400 border border-slate-300 rounded-lg outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+                    onkeydown={onModalKeyDown}
+            />
+            <div class="flex justify-end gap-2 mt-4">
+                <button
+                        type="button"
+                        onclick={(e) => {
+                            e.stopPropagation();
+                            closeCreateModal();
+                        }}
+                        class="px-4 py-2 text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer border-none outline-none"
+                >
+                    Cancel
+                </button>
+                <button
+                        type="button"
+                        onclick={(e) => {
+                            e.stopPropagation();
+                            handleCreateFolder();
+                        }}
+                        class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors cursor-pointer border-none outline-none"
+                >
+                    OK
+                </button>
+            </div>
+        </div>
+    </div>
+{/if}
 </main>
 
